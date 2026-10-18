@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AU World Clock</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:18px;background:#080d18;color:#f1f5f9;font-family:Arial,sans-serif}
+header{text-align:center;padding:10px}
+header h1{color:#00ffd0;text-shadow:0 0 15px #00ffd066}
+.card{max-width:600px;margin:16px auto;padding:20px;background:#111b2b;border:1px solid #263750;border-radius:18px;box-shadow:0 8px 25px #0004}
+h2{font-size:18px;color:#00ffd0;margin-top:0}
+.main-time{font-size:clamp(36px,10vw,56px);text-align:center;color:#00ffd0;font-weight:bold;font-variant-numeric:tabular-nums}
+.date{text-align:center;color:#aab8cc;margin-top:12px}
+.world-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 0;border-bottom:1px solid #263750}
+.world-row:last-child{border:0}.city{font-weight:bold}.zone{font-size:12px;color:#91a4bd;margin-top:5px}
+.world-time{font-size:18px;color:#00ffd0;font-weight:bold}
+.tool-time{font-size:clamp(30px,8vw,42px);text-align:center;margin:22px 0;font-weight:bold;font-variant-numeric:tabular-nums}
+.controls{text-align:center}
+button{border:0;border-radius:9px;padding:12px 15px;margin:4px;background:#00d9b2;color:#06131a;font-weight:bold;font-size:14px}
+button.secondary{background:#263750;color:white}
+input,select{width:100%;padding:12px;margin:7px 0;background:#080d18;color:white;border:1px solid #38506d;border-radius:8px;font-size:16px}
+footer{text-align:center;color:#72839c;padding:20px;font-size:12px}
+</style>
+</head>
+<body>
+<header><h1>⚡ AU WORLD CLOCK</h1><p>Your time. Your world.</p></header>
+<section class="card">
+<h2>🕒 Local Digital Clock</h2><div class="main-time" id="localTime">00:00:00</div><div class="date" id="localDate"></div>
+<div class="controls"><select id="format"><option value="24">24-hour format</option><option value="12">12-hour format</option></select></div>
+</section>
+<section class="card"><h2>🌍 World Clock</h2><div id="worldClocks"></div></section>
+<section class="card">
+<h2>⏱️ Stopwatch</h2><div class="tool-time" id="stopwatch">00:00:00.00</div>
+<div class="controls"><button id="watchStart">Start</button><button class="secondary" id="lapBtn">Lap</button><button class="secondary" id="watchReset">Reset</button></div><div id="laps"></div>
+</section>
+<section class="card">
+<h2>⏳ Countdown Timer</h2><input id="minutes" type="number" min="0" max="999" value="1" placeholder="Minutes"><input id="seconds" type="number" min="0" max="59" value="0" placeholder="Seconds">
+<div class="tool-time" id="timerDisplay">01:00</div>
+<div class="controls"><button id="timerStart">Start</button><button class="secondary" id="timerPause">Pause</button><button class="secondary" id="timerReset">Reset</button></div><p id="timerStatus" style="text-align:center;color:#00ffd0"></p>
+</section>
+<footer>Made with ❤️ by AU Classes</footer>
+<script>
+const $ = id => document.getElementById(id);
+const cities = [
+{name:"India",flag:"🇮🇳",zone:"Asia/Kolkata"},
+{name:"London",flag:"🇬🇧",zone:"Europe/London"},
+{name:"New York",flag:"🇺🇸",zone:"America/New_York"},
+{name:"Tokyo",flag:"🇯🇵",zone:"Asia/Tokyo"},
+{name:"Dubai",flag:"🇦🇪",zone:"Asia/Dubai"},
+{name:"Sydney",flag:"🇦🇺",zone:"Australia/Sydney"}
+];
+cities.forEach((city,i)=>{
+ const row=document.createElement("div"); row.className="world-row";
+ const left=document.createElement("div");
+ const cityName=document.createElement("div"); cityName.className="city"; cityName.textContent=city.flag+" "+city.name;
+ const zone=document.createElement("div"); zone.className="zone"; zone.textContent=city.zone;
+ left.append(cityName,zone);
+ const time=document.createElement("div"); time.className="world-time"; time.id="world"+i; time.textContent="--:--:--";
+ row.append(left,time); $("worldClocks").appendChild(row);
+});
+function timeString(date,zone){
+ return new Intl.DateTimeFormat("en-GB",{timeZone:zone,hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:$("format").value==="12"}).format(date);
+}
+function updateClocks(){
+ const now=new Date();
+ $("localTime").textContent=now.toLocaleTimeString(undefined,{hour12:$("format").value==="12"});
+ $("localDate").textContent=now.toLocaleDateString(undefined,{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+ cities.forEach((city,i)=>{$("world"+i).textContent=timeString(now,city.zone);});
+}
+$("format").addEventListener("change",updateClocks); updateClocks(); setInterval(updateClocks,250);
+let running=false,startAt=0,elapsed=0,watchInterval=null;
+function showWatch(){
+ const ms=elapsed+(running?Date.now()-startAt:0),h=Math.floor(ms/3600000),m=Math.floor(ms/60000)%60,s=Math.floor(ms/1000)%60,cs=Math.floor(ms/10)%100;
+ $("stopwatch").textContent=[h,m,s].map(n=>String(n).padStart(2,"0")).join(":")+"."+String(cs).padStart(2,"0");
+}
+$("watchStart").onclick=()=>{
+ if(running){elapsed+=Date.now()-startAt;running=false;clearInterval(watchInterval);$("watchStart").textContent="Resume";}
+ else{startAt=Date.now();running=true;watchInterval=setInterval(showWatch,30);$("watchStart").textContent="Pause";}
+ showWatch();
+};
+$("lapBtn").onclick=()=>{
+ if(!running&&elapsed===0)return;
+ const item=document.createElement("p");item.style.color="#b9c9dd";
+ item.textContent="Lap "+($("laps").children.length+1)+" — "+$("stopwatch").textContent;$("laps").prepend(item);
+};
+$("watchReset").onclick=()=>{running=false;clearInterval(watchInterval);elapsed=0;$("laps").innerHTML="";$("watchStart").textContent="Start";showWatch();};
+let remaining=60,deadline=0,timerRunning=false,timerInterval=null;
+function readTime(){
+ const m=Number($("minutes").value),s=Number($("seconds").value);
+ if(!Number.isInteger(m)||!Number.isInteger(s)||m<0||m>999||s<0||s>59){alert("Enter valid minutes and seconds.");return null;}
+ if(m*60+s<=0){alert("Enter a timer greater than zero.");return null;}return m*60+s;
+}
+function showTimer(){const t=Math.max(0,Math.ceil(remaining));$("timerDisplay").textContent=String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0");}
+function tick(){
+ remaining=Math.max(0,(deadline-Date.now())/1000);showTimer();
+ if(remaining<=0){clearInterval(timerInterval);timerRunning=false;$("timerStart").textContent="Start";$("timerStatus").textContent="⏰ Time is up!";alert("Time is up!");}
+}
+$("timerStart").onclick=()=>{
+ if(timerRunning)return;
+ if(remaining<=0){const t=readTime();if(t===null)return;remaining=t;}
+ deadline=Date.now()+remaining*1000;timerRunning=true;$("timerStatus").textContent="Timer running...";$("timerStart").textContent="Running";
+ clearInterval(timerInterval);timerInterval=setInterval(tick,100);tick();
+};
+$("timerPause").onclick=()=>{
+ if(!timerRunning)return;remaining=Math.max(0,(deadline-Date.now())/1000);timerRunning=false;clearInterval(timerInterval);showTimer();$("timerStart").textContent="Resume";$("timerStatus").textContent="Timer paused";
+};
+$("timerReset").onclick=()=>{
+ timerRunning=false;clearInterval(timerInterval);const t=readTime();if(t!==null)remaining=t;showTimer();$("timerStart").textContent="Start";$("timerStatus").textContent="";
+};
+$("minutes").onchange=$("seconds").onchange=()=>{
+ if(timerRunning)return;const t=readTime();if(t!==null){remaining=t;showTimer();$("timerStatus").textContent="";}
+};
+showWatch();showTimer();
+</script>
+</body>
+</html>
